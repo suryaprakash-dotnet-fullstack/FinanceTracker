@@ -1,10 +1,16 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FinanceTracker.Data;
 using FinanceTracker.Models;
 using FinanceTracker.Services;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── Force en-IN culture globally so .ToString("C") renders ₹ on all platforms
+var cultureInfo = new CultureInfo("en-IN");
+CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite("Data Source=financetracker.db"));

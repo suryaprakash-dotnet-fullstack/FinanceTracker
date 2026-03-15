@@ -1,6 +1,9 @@
 @model List<FinanceTracker.Models.Transaction>
-@{ ViewData["Title"] = "Transactions"; }
+@{
+    ViewData["Title"] = "Transactions";
+}
 
+@* Filter bar *@
 <div class="card" style="margin-bottom:20px;">
     <form method="get" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
         <div>
@@ -12,7 +15,9 @@
             <select class="form-control" name="type">
                 <option value="">All</option>
                 @foreach (var t in Enum.GetValues<TransactionType>())
-                {<option value="@t" selected="@(ViewBag.CurrentType == t.ToString())">@t</option>}
+                {
+                    <option value="@t" selected="@(ViewBag.CurrentType == t.ToString())">@t</option>
+                }
             </select>
         </div>
         <div>
@@ -20,7 +25,9 @@
             <select class="form-control" name="categoryId">
                 <option value="">All</option>
                 @foreach (var c in (List<Category>)ViewBag.Categories)
-                {<option value="@c.Id" selected="@(ViewBag.CurrentCategoryId?.ToString() == c.Id.ToString())">@c.Icon @c.Name</option>}
+                {
+                    <option value="@c.Id" selected="@(ViewBag.CurrentCategoryId?.ToString() == c.Id.ToString())">@c.Icon @c.Name</option>
+                }
             </select>
         </div>
         <div>
@@ -39,52 +46,238 @@
 <div class="card">
     <div class="card-header">
         <span class="card-title">@ViewBag.TotalCount Transactions</span>
-        <a asp-action="Create" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add Transaction</a>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div id="bulkToolbar" style="display:none;align-items:center;gap:8px;">
+                <span id="selectedBadge" style="font-size:13px;font-weight:600;color:var(--text-muted);"></span>
+                <button type="button" class="btn btn-danger btn-sm" onclick="confirmBulkDelete()">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
+            </div>
+            <a asp-action="Create" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add Transaction</a>
+        </div>
     </div>
+
+    @* "Select all pages" banner — appears after all rows on page are checked *@
+    <div id="allPagesBar" style="display:none;background:#eef2ff;border-bottom:1px solid #c7d2fe;padding:10px 20px;font-size:13px;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span id="allPagesMsg"></span>
+        <button type="button" onclick="toggleAllPages()"
+                style="background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;font-size:13px;padding:0;"
+                id="allPagesBtn"></button>
+    </div>
+
+    @* Bulk delete form — dual-mode: "ids" for current page, "filter" for all pages *@
+    <form id="bulkDeleteForm" asp-action="DeleteBulk" method="post" style="display:none;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" id="deleteMode" name="mode" value="ids" />
+        <input type="hidden" id="f_search" name="search" value="" />
+        <input type="hidden" id="f_type" name="type" value="" />
+        <input type="hidden" id="f_categoryId" name="categoryId" value="" />
+        <input type="hidden" id="f_accountId" name="accountId" value="" />
+        <input type="hidden" id="f_from" name="from" value="" />
+        <input type="hidden" id="f_to" name="to" value="" />
+        <div id="bulkIds"></div>
+    </form>
+
     <div class="table-wrap">
-    <table>
-        <thead>
-            <tr><th>Date</th><th>Description</th><th>Category</th><th>Account</th><th>Type</th><th>Amount</th><th>Actions</th></tr>
-        </thead>
-        <tbody>
-        @if (!Model.Any()) {
-            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No transactions found. <a asp-action="Create">Add your first transaction.</a></td></tr>
-        }
-        @foreach (var t in Model)
-        {
-            <tr>
-                <td class="text-muted">@t.Date.ToString("MMM dd, yyyy")</td>
-                <td>
-                    <div style="font-weight:500;">@t.Description</div>
-                    @if (!string.IsNullOrEmpty(t.Tags)) { <div style="font-size:11px;color:var(--text-muted);">🏷️ @t.Tags</div> }
-                </td>
-                <td>@t.Category?.Icon @t.Category?.Name</td>
-                <td>@t.Account?.Name</td>
-                <td><span class="badge badge-@t.Type.ToString().ToLower()">@t.Type</span></td>
-                <td class="fw-bold @(t.Type == TransactionType.Income ? "text-income" : t.Type == TransactionType.Expense ? "text-expense" : "")">
-                    @(t.Type == TransactionType.Income ? "+" : t.Type == TransactionType.Expense ? "-" : "")@t.Amount.ToString("C")
-                </td>
-                <td>
-                    <div style="display:flex;gap:6px;">
-                        <a asp-action="Edit" asp-route-id="@t.Id" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i></a>
-                        <form asp-action="Delete" asp-route-id="@t.Id" method="post" onsubmit="return confirm('Delete this transaction?')">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-        }
-        </tbody>
-    </table>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:40px;">
+                        <input type="checkbox" id="selectAll" title="Select all on this page"
+                               onchange="onSelectAllChange(this.checked)" />
+                    </th>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th class="hide-mobile">Category</th>
+                    <th class="hide-mobile">Account</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
+                            No transactions found. <a asp-action="Create">Add your first transaction.</a>
+                        </td>
+                    </tr>
+                }
+                @foreach (var t in Model)
+                {
+                    <tr>
+                        <td><input type="checkbox" class="row-check" value="@t.Id" onchange="onRowCheckChange()" /></td>
+                        <td class="text-muted" style="white-space:nowrap;">@t.Date.ToString("MMM dd, yyyy")</td>
+                        <td>
+                            <div style="font-weight:500;">@t.Description</div>
+                            @if (!string.IsNullOrEmpty(t.Tags))
+                            {
+                                <div style="font-size:11px;color:var(--text-muted);">🏷️ @t.Tags</div>
+                            }
+                        </td>
+                        <td class="hide-mobile">@t.Category?.Icon @t.Category?.Name</td>
+                        <td class="hide-mobile">@t.Account?.Name</td>
+                        <td><span class="badge badge-@t.Type.ToString().ToLower()">@t.Type</span></td>
+                        <td class="fw-bold @(t.Type == TransactionType.Income ? "text-income" : t.Type == TransactionType.Expense ? "text-expense" : "")" style="white-space:nowrap;">
+                            @(t.Type == TransactionType.Income ? "+" : t.Type == TransactionType.Expense ? "-" : "")@t.Amount.ToString("C")
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;">
+                                <a asp-action="Edit" asp-route-id="@t.Id" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i></a>
+                                <form asp-action="Delete" asp-route-id="@t.Id" method="post"
+                                      onsubmit="return confirm('Delete this transaction?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
+
     @if ((int)ViewBag.TotalPages > 1)
     {
         <div class="pagination">
             @for (int i = 1; i <= (int)ViewBag.TotalPages; i++)
             {
-                <a href="?page=@i&search=@ViewBag.Search&type=@ViewBag.CurrentType&from=@ViewBag.From&to=@ViewBag.To" class="page-link @(i == (int)ViewBag.Page ? "active" : "")">@i</a>
+                <a href="?page=@i&search=@ViewBag.Search&type=@ViewBag.CurrentType&categoryId=@ViewBag.CurrentCategoryId&from=@ViewBag.From&to=@ViewBag.To"
+                   class="page-link @(i == (int)ViewBag.Page ? "active" : "")">@i</a>
             }
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        const TOTAL_COUNT = @ViewBag.TotalCount;
+        const TOTAL_PAGES = @ViewBag.TotalPages;
+
+        // Current filter values baked in from the server
+        const FILTERS = {
+            search:     '@Html.Raw((ViewBag.Search ?? "").ToString().Replace("'", "\\'"))',
+            type:       '@Html.Raw((ViewBag.CurrentType ?? "").ToString().Replace("'", "\\'"))',
+            categoryId: '@Html.Raw((ViewBag.CurrentCategoryId?.ToString() ?? ""))',
+            accountId:  '@Html.Raw((ViewBag.CurrentAccountId?.ToString() ?? ""))',
+            from:       '@Html.Raw((ViewBag.From ?? "").ToString().Replace("'", "\\'"))',
+            to:         '@Html.Raw((ViewBag.To ?? "").ToString().Replace("'", "\\'"))'
+        };
+
+        let selectingAllPages = false;
+
+        // Header checkbox clicked
+        function onSelectAllChange(checked) {
+            if (!checked) { selectingAllPages = false; hideBar(); }
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = checked);
+            onRowCheckChange(/* skipBarCheck */ false, /* fromHeader */ true);
+        }
+
+        // Individual row changed
+        function onRowCheckChange(skipBarCheck, fromHeader) {
+            // Any manual row uncheck cancels "all pages" mode
+            if (!fromHeader && selectingAllPages) { selectingAllPages = false; hideBar(); }
+
+            const all     = document.querySelectorAll('.row-check');
+            const checked = document.querySelectorAll('.row-check:checked');
+            const hdr     = document.getElementById('selectAll');
+
+            hdr.indeterminate = checked.length > 0 && checked.length < all.length;
+            hdr.checked       = checked.length > 0 && checked.length === all.length;
+
+            updateToolbar(selectingAllPages ? TOTAL_COUNT : checked.length);
+
+            // Show "select all pages" banner when all visible rows are ticked and more pages exist
+            if (checked.length === all.length && all.length > 0 && TOTAL_PAGES > 1 && !selectingAllPages)
+                showBar(false);
+            else if (!selectingAllPages)
+                hideBar();
+        }
+
+        // Banner helpers
+        function showBar(allPages) {
+            const bar = document.getElementById('allPagesBar');
+            const msg = document.getElementById('allPagesMsg');
+            const btn = document.getElementById('allPagesBtn');
+            const pageCount = document.querySelectorAll('.row-check').length;
+
+            if (allPages) {
+                msg.textContent = `All ${TOTAL_COUNT} transactions are selected.`;
+                btn.textContent = 'Clear selection';
+            } else {
+                msg.textContent = `All ${pageCount} transactions on this page are selected.`;
+                btn.textContent = `Select all ${TOTAL_COUNT} transactions`;
+            }
+            bar.style.display = 'flex';
+        }
+
+        function hideBar() { document.getElementById('allPagesBar').style.display = 'none'; }
+
+        function toggleAllPages() {
+            if (selectingAllPages) {
+                // Clear everything
+                selectingAllPages = false;
+                document.getElementById('selectAll').checked = false;
+                document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+                updateToolbar(0);
+                hideBar();
+            } else {
+                // Enter "all pages" mode
+                selectingAllPages = true;
+                showBar(true);
+                updateToolbar(TOTAL_COUNT);
+            }
+        }
+
+        function updateToolbar(count) {
+            const toolbar = document.getElementById('bulkToolbar');
+            const badge   = document.getElementById('selectedBadge');
+            if (count > 0) {
+                toolbar.style.display = 'flex';
+                badge.textContent = selectingAllPages
+                    ? `All ${TOTAL_COUNT} transactions selected`
+                    : `${count} selected`;
+            } else {
+                toolbar.style.display = 'none';
+            }
+        }
+
+        // Submit
+        function confirmBulkDelete() {
+            const checkedRows = document.querySelectorAll('.row-check:checked');
+            const deleteCount = selectingAllPages ? TOTAL_COUNT : checkedRows.length;
+            if (!deleteCount) return;
+
+            const msg = selectingAllPages
+                ? `Delete ALL ${TOTAL_COUNT} transactions matching the current filter? This cannot be undone.`
+                : `Delete ${deleteCount} selected transaction(s)? This cannot be undone.`;
+
+            if (!confirm(msg)) return;
+
+            if (selectingAllPages) {
+                document.getElementById('deleteMode').value   = 'filter';
+                document.getElementById('f_search').value     = FILTERS.search;
+                document.getElementById('f_type').value       = FILTERS.type;
+                document.getElementById('f_categoryId').value = FILTERS.categoryId;
+                document.getElementById('f_accountId').value  = FILTERS.accountId;
+                document.getElementById('f_from').value       = FILTERS.from;
+                document.getElementById('f_to').value         = FILTERS.to;
+                document.getElementById('bulkIds').innerHTML  = '';
+            } else {
+                document.getElementById('deleteMode').value = 'ids';
+                const container = document.getElementById('bulkIds');
+                container.innerHTML = '';
+                checkedRows.forEach(cb => {
+                    const inp = document.createElement('input');
+                    inp.type  = 'hidden';
+                    inp.name  = 'ids';
+                    inp.value = cb.value;
+                    container.appendChild(inp);
+                });
+            }
+
+            document.getElementById('bulkDeleteForm').submit();
+        }
+    </script>
+}

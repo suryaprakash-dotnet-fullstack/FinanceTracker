@@ -19,7 +19,7 @@
         <div class="stat-icon" style="background:#e0e7ff;">🎯</div>
         <div class="stat-info">
             <div class="stat-label">Total Budget</div>
-            <div class="stat-value">@((decimal)ViewBag.TotalBudget).ToString("C")</div>
+            <div class="stat-value">@(Convert.ToDecimal(ViewBag.TotalBudget).ToString("C"))</div>
         </div>
     </div>
 
@@ -27,7 +27,7 @@
         <div class="stat-icon" style="background:#fee2e2;">💸</div>
         <div class="stat-info">
             <div class="stat-label">Total Spent</div>
-            <div class="stat-value text-expense">@((decimal)ViewBag.TotalSpent).ToString("C")</div>
+            <div class="stat-value text-expense">@(Convert.ToDecimal(ViewBag.TotalSpent).ToString("C"))</div>
         </div>
     </div>
 
@@ -35,7 +35,7 @@
         <div class="stat-icon" style="background:#dcfce7;">✅</div>
         <div class="stat-info">
             <div class="stat-label">Remaining</div>
-            <div class="stat-value text-income">@(((decimal)ViewBag.TotalBudget - (decimal)ViewBag.TotalSpent).ToString("C"))</div>
+            <div class="stat-value text-income">@((Convert.ToDecimal(ViewBag.TotalBudget) - Convert.ToDecimal(ViewBag.TotalSpent)).ToString("C"))</div>
         </div>
     </div>
 </div>

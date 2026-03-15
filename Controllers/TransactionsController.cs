@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -126,9 +126,16 @@ public class TransactionsController : Controller
         await PopulateDropdowns();
         return View(new TransactionViewModel
         {
-            Id = t.Id, Amount = t.Amount, Description = t.Description, Date = t.Date,
-            Type = t.Type, CategoryId = t.CategoryId, AccountId = t.AccountId,
-            ToAccountId = t.ToAccountId, Notes = t.Notes, Tags = t.Tags
+            Id = t.Id,
+            Amount = t.Amount,
+            Description = t.Description,
+            Date = t.Date,
+            Type = t.Type,
+            CategoryId = t.CategoryId,
+            AccountId = t.AccountId,
+            ToAccountId = t.ToAccountId,
+            Notes = t.Notes,
+            Tags = t.Tags
         });
     }
 
@@ -181,6 +188,75 @@ public class TransactionsController : Controller
         _db.Transactions.Remove(t);
         await _db.SaveChangesAsync();
         TempData["Success"] = "Transaction deleted.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteBulk(
+        string mode,
+        List<int>? ids,
+        string? search, string? type, int? categoryId, int? accountId,
+        DateTime? from, DateTime? to)
+    {
+        List<Transaction> transactions;
+
+        if (mode == "filter")
+        {
+            // ── Filter mode: delete ALL transactions matching current filters ──
+            var query = _db.Transactions
+                .Include(t => t.Account)
+                .Where(t => t.UserId == UserId);
+
+            if (!string.IsNullOrEmpty(type) && Enum.TryParse<TransactionType>(type, out var tt))
+                query = query.Where(t => t.Type == tt);
+            if (categoryId.HasValue)
+                query = query.Where(t => t.CategoryId == categoryId);
+            if (accountId.HasValue)
+                query = query.Where(t => t.AccountId == accountId);
+            if (from.HasValue)
+                query = query.Where(t => t.Date >= from.Value);
+            if (to.HasValue)
+                query = query.Where(t => t.Date <= to.Value);
+            if (!string.IsNullOrEmpty(search))
+                query = query.Where(t => t.Description.Contains(search) ||
+                                         (t.Notes != null && t.Notes.Contains(search)));
+
+            transactions = await query.ToListAsync();
+        }
+        else
+        {
+            // ── IDs mode: delete only the explicitly selected rows ──
+            if (ids == null || !ids.Any())
+            {
+                TempData["Error"] = "No transactions selected.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            transactions = await _db.Transactions
+                .Include(t => t.Account)
+                .Where(t => ids.Contains(t.Id) && t.UserId == UserId)
+                .ToListAsync();
+        }
+
+        if (!transactions.Any())
+        {
+            TempData["Error"] = "No matching transactions found.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        foreach (var t in transactions)
+        {
+            // Reverse balance effect on the account
+            if (t.Account != null)
+            {
+                t.Account.Balance -= t.Type == TransactionType.Income ? t.Amount :
+                                     t.Type == TransactionType.Expense ? -t.Amount : -t.Amount;
+            }
+            _db.Transactions.Remove(t);
+        }
+
+        await _db.SaveChangesAsync();
+        TempData["Success"] = $"{transactions.Count} transaction(s) deleted.";
         return RedirectToAction(nameof(Index));
     }
 

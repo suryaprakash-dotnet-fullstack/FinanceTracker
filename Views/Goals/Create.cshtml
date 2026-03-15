@@ -1,0 +1,16 @@
+@model FinanceTracker.ViewModels.GoalViewModel
+@{ ViewData["Title"] = "Create Goal"; }
+<div style="max-width:500px;margin:0 auto;">
+<div class="card">
+    <div class="card-header"><span class="card-title">New Savings Goal</span><a asp-action="Index" class="btn btn-outline btn-sm">← Back</a></div>
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <div class="form-group"><label class="form-label">Name</label><input asp-for="Name" class="form-control" required/></div>
+        <div class="form-group"><label class="form-label">Description</label><input asp-for="Description" class="form-control"/></div>
+        <div class="form-group"><label class="form-label">Target Amount</label><input asp-for="TargetAmount" type="number" step="0.01" class="form-control" required/></div>
+        <div class="form-group"><label class="form-label">Current Amount</label><input asp-for="CurrentAmount" type="number" step="0.01" class="form-control" value="0"/></div>
+        <div class="form-group"><label class="form-label">Target Date</label><input asp-for="TargetDate" type="date" class="form-control"/></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Create Goal</button>
+    </form>
+</div>
+</div>

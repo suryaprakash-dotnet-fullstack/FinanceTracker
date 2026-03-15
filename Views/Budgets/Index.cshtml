@@ -1,0 +1,203 @@
+@model List<FinanceTracker.Models.Budget>
+@{
+    ViewData["Title"] = "Budgets";
+}
+
+<div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+    @for (int m = 1; m <= 12; m++)
+    {
+        <a href="?month=@m&year=@ViewBag.Year"
+           class="btn @(m == (int)ViewBag.Month ? "btn-primary" : "btn-outline") btn-sm">
+            @(new DateTime(2000, m, 1).ToString("MMM"))
+        </a>
+    }
+    <span style="color:var(--text-muted);margin-left:8px;">@ViewBag.Year</span>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#e0e7ff;">🎯</div>
+        <div class="stat-info">
+            <div class="stat-label">Total Budget</div>
+            <div class="stat-value">@((decimal)ViewBag.TotalBudget).ToString("C")</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fee2e2;">💸</div>
+        <div class="stat-info">
+            <div class="stat-label">Total Spent</div>
+            <div class="stat-value text-expense">@((decimal)ViewBag.TotalSpent).ToString("C")</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#dcfce7;">✅</div>
+        <div class="stat-info">
+            <div class="stat-label">Remaining</div>
+            <div class="stat-value text-income">@(((decimal)ViewBag.TotalBudget - (decimal)ViewBag.TotalSpent).ToString("C"))</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+
+    <div>
+        @foreach (var b in Model)
+        {
+            var pct = Math.Min((double)b.PercentUsed, 100);
+            var color = pct >= 100 ? "var(--danger)" : pct >= 80 ? "var(--warning)" : "var(--success)";
+
+            <div class="card" style="margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+
+                    <div>
+                        <div style="font-size:16px;font-weight:700;">@b.Category?.Icon @b.Name</div>
+                        <div class="text-muted" style="font-size:13px;">@b.Category?.Name</div>
+                    </div>
+
+                    <div style="text-align:right;">
+                        <div class="fw-bold" style="font-size:18px;color:@color;">@pct.ToString("F0")%</div>
+
+                        <form asp-action="Delete"
+                              asp-route-id="@b.Id"
+                              method="post"
+                              style="display:inline;"
+                              onsubmit="return confirm('Delete budget?')">
+
+                            @Html.AntiForgeryToken()
+
+                            <button type="submit"
+                                    class="btn btn-danger btn-sm"
+                                    style="margin-top:4px;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+
+                <div class="progress" style="height:12px;margin-bottom:8px;">
+                    <div class="progress-bar"
+                         style="width:@pct%;background:@color;"></div>
+                </div>
+
+                <div style="display:flex;justify-content:space-between;font-size:13px;">
+                    <span class="text-muted">
+                        Spent: <strong>@b.Spent.ToString("C")</strong>
+                    </span>
+
+                    <span class="text-muted">
+                        Budget: <strong>@b.Amount.ToString("C")</strong>
+                    </span>
+
+                    <span style="color:@(b.Remaining >= 0 ? "var(--success)" : "var(--danger)")">
+                        @b.Remaining.ToString("C") left
+                    </span>
+                </div>
+            </div>
+        }
+
+        @if (!Model.Any())
+        {
+            <div class="card" style="text-align:center;padding:40px;">
+                <div style="font-size:48px;margin-bottom:12px;">🎯</div>
+                <p class="text-muted">No budgets for this month yet.</p>
+            </div>
+        }
+    </div>
+
+
+    <div class="card" style="align-self:start;">
+
+        <div class="card-header">
+            <span class="card-title">Create Budget</span>
+        </div>
+
+        <form asp-action="Create" method="post">
+
+            @Html.AntiForgeryToken()
+
+            @Html.ValidationSummary(true, "", new { @class = "alert alert-danger" })
+
+            <div class="form-group">
+                <label class="form-label">Budget Name *</label>
+                <input name="Name"
+                       class="form-control"
+                       placeholder="e.g., Food Budget"
+                       required />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Category *</label>
+                <select name="CategoryId"
+                        class="form-control"
+                        asp-items="ViewBag.Categories">
+
+                    <option value="">Select...</option>
+
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Amount *</label>
+                <input name="Amount"
+                       type="number"
+                       step="0.01"
+                       min="0"
+                       class="form-control"
+                       placeholder="0.00"
+                       required />
+            </div>
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label class="form-label">Month</label>
+
+                    <select name="Month" class="form-control">
+
+                        @for (int m = 1; m <= 12; m++)
+                        {
+                            <option value="@m"
+                                    selected="@(m == (int)ViewBag.Month)">
+                                @(new DateTime(2000, m, 1).ToString("MMMM"))
+                            </option>
+                        }
+
+                    </select>
+
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Year</label>
+
+                    <input name="Year"
+                           type="number"
+                           class="form-control"
+                           value="@ViewBag.Year" />
+                </div>
+
+            </div>
+
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox"
+                           name="RolloverEnabled"
+                           value="true" />
+
+                    Rollover unused budget
+                </label>
+            </div>
+
+            <button type="submit"
+                    class="btn btn-primary"
+                    style="width:100%;justify-content:center;">
+                Create Budget
+            </button>
+
+        </form>
+
+    </div>
+
+</div>

@@ -1,0 +1,76 @@
+@model FinanceTracker.ViewModels.RegisterViewModel
+@{ ViewData["Title"] = "Create Account"; Layout = null; }
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Register - FinanceTracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.auth-container{width:100%;max-width:480px;}
+.auth-card{background:white;border-radius:24px;padding:40px;box-shadow:0 25px 50px rgba(0,0,0,0.3);}
+.auth-logo{text-align:center;margin-bottom:28px;}
+.auth-logo .icon{font-size:48px;display:block;margin-bottom:8px;}
+.auth-logo h1{font-size:24px;font-weight:700;color:#1e1b4b;}
+.auth-logo p{color:#64748b;font-size:14px;margin-top:4px;}
+.form-group{margin-bottom:14px;}
+.form-label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;}
+.form-control{width:100%;padding:11px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;}
+.form-control:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px #e0e7ff;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:8px;}
+.btn-primary{background:#6366f1;color:white;}
+.btn-primary:hover{background:#4f46e5;}
+.auth-footer{text-align:center;margin-top:18px;font-size:14px;color:#64748b;}
+.auth-footer a{color:#6366f1;font-weight:600;}
+.alert{padding:12px 16px;background:#fee2e2;color:#991b1b;border-radius:10px;margin-bottom:16px;font-size:13px;}
+.features{display:flex;gap:12px;margin-bottom:24px;}
+.feature{flex:1;text-align:center;padding:10px;background:#f8fafc;border-radius:10px;font-size:12px;color:#64748b;}
+.feature-icon{font-size:20px;display:block;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <span class="icon">💸</span>
+            <h1>Get Started Free</h1>
+            <p>Create your FinanceTracker account</p>
+        </div>
+        <div class="features">
+            <div class="feature"><span class="feature-icon">📊</span>Track Spending</div>
+            <div class="feature"><span class="feature-icon">🎯</span>Set Budgets</div>
+            <div class="feature"><span class="feature-icon">💰</span>Save Goals</div>
+        </div>
+        @Html.ValidationSummary(false, "", new { @class = "alert" })
+        <form asp-action="Register" method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input asp-for="FirstName" class="form-control" placeholder="Surya" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input asp-for="LastName" class="form-control" placeholder="Kumar" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input asp-for="Email" class="form-control" placeholder="you@example.com" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input asp-for="Password" class="form-control" type="password" placeholder="Min. 6 characters" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input asp-for="ConfirmPassword" class="form-control" type="password" placeholder="Repeat password" />
+            </div>
+            <button type="submit" class="btn btn-primary">Create Account →</button>
+        </form>
+        <div class="auth-footer">Already have an account? <a asp-action="Login">Sign in</a></div>
+    </div>
+</div>
+</body></html>

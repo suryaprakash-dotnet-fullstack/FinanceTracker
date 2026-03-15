@@ -1,0 +1,16 @@
+@model FinanceTracker.ViewModels.AccountViewModel
+@{ ViewData["Title"] = "Add Account"; }
+<div style="max-width:500px;margin:0 auto;">
+<div class="card">
+    <div class="card-header"><span class="card-title">Add Account</span><a asp-action="Index" class="btn btn-outline btn-sm">← Back</a></div>
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <div class="form-group"><label class="form-label">Name</label><input asp-for="Name" class="form-control" required/></div>
+        <div class="form-group"><label class="form-label">Type</label>
+            <select asp-for="Type" class="form-control">@foreach(var t in Enum.GetValues<AccountType>()){<option value="@t">@t</option>}</select>
+        </div>
+        <div class="form-group"><label class="form-label">Initial Balance</label><input asp-for="InitialBalance" type="number" step="0.01" class="form-control" value="0"/></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Add Account</button>
+    </form>
+</div>
+</div>

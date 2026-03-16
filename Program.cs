@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using FinanceTracker.Data;
+﻿using FinanceTracker.Data;
 using FinanceTracker.Models;
 using FinanceTracker.Services;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using System.Globalization;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +36,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddScoped<FinanceService>();
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();

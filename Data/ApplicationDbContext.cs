@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using FinanceTracker.Models;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 
 namespace FinanceTracker.Data;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IDataProtectionKeyContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<Category> Categories => Set<Category>();

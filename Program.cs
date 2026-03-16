@@ -8,6 +8,7 @@ using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 // ── Force en-IN culture globally so .ToString("C") renders ₹ on all platforms
 var cultureInfo = new CultureInfo("en-IN");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
